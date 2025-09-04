@@ -1,4 +1,3 @@
-# weather_dashboard_realistic_rain.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,91 +9,85 @@ import plotly.express as px
 # Page Config
 # ----------------------------
 st.set_page_config(
-    page_title="🌦️ Weather AUS Realistic Rain Dashboard",
+    page_title="🌦️ Weather AUS Simple Rain",
     layout="wide",
     page_icon="🌦️"
 )
 
 # ----------------------------
-# CSS for realistic rain + clouds + light blue background
+# CSS: Light blue background + clouds + simple rain
 # ----------------------------
 st.markdown("""
 <style>
 body {
-    background: linear-gradient(to bottom, #b3e0ff, #e6f7ff);
+    background: linear-gradient(to bottom, #cceeff, #e6f7ff);
     color: #0c1e3d;
     font-family: 'Arial', sans-serif;
     overflow-x: hidden;
 }
-.stButton>button {
-    background-color: #0c1e3d;
-    color: white;
-}
 
-/* Clouds Animation */
-@keyframes cloudMove {
-    0% {left: -30%;}
-    100% {left: 100%;}
-}
+/* Clouds */
 .cloud {
     position: absolute;
-    width: 250px;
+    top: 10%;
+    width: 200px;
     height: 80px;
     background: url('https://i.ibb.co/WD7zC6X/clouds.png') no-repeat;
     background-size: cover;
-    animation: cloudMove linear infinite;
-    opacity: 0.5;
+    opacity: 0.4;
+    animation: cloudMove 120s linear infinite;
 }
-.cloud1 { top:5%; animation-duration: 90s; }
-.cloud2 { top:20%; animation-duration: 120s; }
-.cloud3 { top:35%; animation-duration: 100s; }
 
-/* Realistic Raindrops */
+.cloud2 { top: 30%; width:250px; animation-duration: 150s; }
+.cloud3 { top: 50%; width:180px; animation-duration: 100s; }
+
+/* Clouds Animation */
+@keyframes cloudMove {
+    0% {left: -25%;}
+    100% {left: 105%;}
+}
+
+/* Simple raindrops */
 @keyframes rainFall {
-    0% {top: -15%; }
-    100% {top: 105%; }
+    0% {top: -10%;}
+    100% {top: 110%;}
 }
 .raindrop {
     position: absolute;
     width: 2px;
-    height: 20px;
+    height: 15px;
     background: #99d6ff;
     animation: rainFall linear infinite;
-    opacity: 0.7;
+    opacity: 0.6;
     border-radius: 50%;
 }
 </style>
 
-<div class="cloud cloud1"></div>
+<div class="cloud"></div>
 <div class="cloud cloud2"></div>
 <div class="cloud cloud3"></div>
 
 """ + "\n".join([
-    f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.uniform(0.8,1.5)}s;"></div>'
-    for i in range(50)
-]) + """
-<audio autoplay loop>
-  <source src="https://www.soundjay.com/nature/rain-01.mp3" type="audio/mpeg">
-</audio>
-""", unsafe_allow_html=True)
+    f'<div class="raindrop" style="left:{i*3}%; animation-duration:{np.random.uniform(1.0,1.5)}s;"></div>'
+    for i in range(30)
+]) , unsafe_allow_html=True)
 
 # ----------------------------
-# Load Random Example Data
+# Example Random Data
 # ----------------------------
 @st.cache_data
 def load_data():
     data = {
         "Location": np.random.choice(
-            ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart","Darwin","Canberra"], 500
+            ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart","Darwin","Canberra"], 400
         ),
-        "Month": np.random.randint(1,13,500),
-        "RainTomorrow": np.random.choice(["Yes","No"], 500),
-        "Rainfall": np.random.rand(500)*20,
-        "Temp3pm": np.random.rand(500)*15+15,
-        "Humidity3pm": np.random.randint(30,100,500)
+        "Month": np.random.randint(1,13,400),
+        "RainTomorrow": np.random.choice(["Yes","No"], 400),
+        "Rainfall": np.random.rand(400)*20,
+        "Temp3pm": np.random.rand(400)*15+15,
+        "Humidity3pm": np.random.randint(30,100,400)
     }
-    df = pd.DataFrame(data)
-    return df
+    return pd.DataFrame(data)
 
 df = load_data()
 
@@ -129,7 +122,7 @@ filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_mo
 # ----------------------------
 # Title & Prediction
 # ----------------------------
-st.title("🌦️ Weather AUS Realistic Rain Dashboard")
+st.title("🌦️ Weather AUS Simple Rain Dashboard")
 st.subheader(f"Location: {selected_location} | Month: {selected_month}")
 
 X_pred = filtered_df[features]

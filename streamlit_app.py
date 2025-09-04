@@ -1,186 +1,134 @@
-# -----------------------------
-# Imports
-# -----------------------------
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, ExtraTreesClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
-from xgboost import XGBRFClassifier
-from lightgbm import LGBMClassifier
-from catboost import CatBoostClassifier
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
 import plotly.express as px
+import os
 
-# -----------------------------
-# Page Config
-# -----------------------------
-st.set_page_config(layout="wide", page_title="🌦️ WeatherAUS Dashboard")
+st.set_page_config(page_title="Weather AUS Prediction", layout="wide")
 
-# -----------------------------
-# Load dataset safely
-# -----------------------------
-@st.cache_data
-def load_data():
-    df = pd.read_csv("weatherAUS.csv")
-    # إزالة أي فراغات في أسماء الأعمدة
-    df.columns = df.columns.str.strip()
-    
-    # تأكد وجود Month
-    if 'Month' in df.columns:
-        df['Month'] = df['Month'].astype(int)
-    else:
-        st.error("Column 'Month' not found in dataset!")
+# 🎨 تصميم الواجهة مع المطر المتحرك
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(to bottom, #a2d5f2, #ffffff);
+    }
+    /* المطر */
+    .rain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 9999;
+    }
+    .raindrop {
+      position: absolute;
+      width: 2px;
+      height: 10px;
+      background: white;
+      opacity: 0.6;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      0% {transform: translateY(-10px);}
+      100% {transform: translateY(100vh);}
+    }
+    </style>
+    <div class="rain" id="rain"></div>
+    <script>
+    const rain = document.getElementById("rain");
+    for(let i=0;i<150;i++){
+        let drop = document.createElement("div");
+        drop.className="raindrop";
+        drop.style.left=Math.random()*100+"%";
+        drop.style.animationDuration=(0.5+Math.random()*0.5)+"s";
+        drop.style.animationDelay=(Math.random()*5)+"s";
+        rain.appendChild(drop);
+    }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
 
-    # Encode categorical
-    if 'RainTomorrow' in df.columns:
-        df['RainTomorrow_Code'] = df['RainTomorrow'].map({'Yes':1,'No':0})
-    if 'RainToday' in df.columns:
-        df['RainToday_Code'] = df['RainToday'].map({'Yes':1,'No':0})
-    if 'Location' in df.columns:
-        le_loc = LabelEncoder()
-        df['Location_Code'] = le_loc.fit_transform(df['Location'])
-    else:
-        le_loc = None
+st.title("🌧️ Weather Prediction Dashboard")
+st.subheader("Predict if it will rain tomorrow in Australia")
 
-    # Fill missing numerical values
-    num_cols = ['Rainfall','Temp3pm','Humidity3pm','WindSpeed_mean']
-    for col in num_cols:
-        if col in df.columns:
-            df[col] = df[col].fillna(df[col].median())
-    
-    return df, le_loc
+# 📂 تحميل CSV
+csv_path = "weatherAUS.csv"
+if not os.path.exists(csv_path):
+    st.error("⚠️ File weatherAUS.csv not found in app folder!")
+    st.stop()
 
-df, le_location = load_data()
+df = pd.read_csv(csv_path)
 
-# -----------------------------
-# Sidebar Filters
-# -----------------------------
-st.sidebar.title("Filters")
-if 'Location' in df.columns:
-    selected_location = st.sidebar.selectbox("Select Location", df['Location'].unique())
-else:
-    selected_location = None
+# تحويل أعمدة النصوص لأرقام
+le_rain = LabelEncoder()
+df['RainTomorrow_enc'] = le_rain.fit_transform(df['RainTomorrow'])
 
-if 'Month' in df.columns:
-    selected_month = st.sidebar.slider("Select Month (1-12)", 1, 12, 1)
-else:
-    selected_month = None
+# Sidebar لاختيار Location و Month
+st.sidebar.header("Filters")
+locations = df['Location'].unique()
+selected_location = st.sidebar.selectbox("Select Location", locations)
+months = sorted(df['Month'].dropna().unique())
+selected_month = st.sidebar.selectbox("Select Month", months)
 
-# -----------------------------
-# Filter data safely
-# -----------------------------
-if selected_location is not None and selected_month is not None:
-    filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
-else:
-    filtered_df = df.copy()
+# فلترة الداتا
+filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
 
-# -----------------------------
-# Dashboard Title
-# -----------------------------
-st.title(f"🌦️ Weather Dashboard: {selected_location} | Month {selected_month}")
+st.markdown(f"### Weather data for {selected_location}, Month {selected_month}")
+st.dataframe(filtered_df)
 
-# -----------------------------
-# Rain Probability Metric
-# -----------------------------
-rain_prob = filtered_df['RainTomorrow_Code'].mean() if 'RainTomorrow_Code' in filtered_df.columns and len(filtered_df)>0 else 0
-st.metric("Probability of RainTomorrow", f"{rain_prob*100:.2f}%")
+# 👁️ Visualizations
 
-# -----------------------------
-# Weather Summary
-# -----------------------------
-st.write("### Weather Summary")
-stats_cols = ['Rainfall','Temp3pm','Humidity3pm','WindSpeed_mean']
-stats_cols = [col for col in stats_cols if col in filtered_df.columns]
-if len(filtered_df) > 0:
-    st.dataframe(filtered_df[stats_cols].describe().T)
-else:
-    st.write("No data for this selection")
+# 1️⃣ RainTomorrow by Location
+fig1 = px.histogram(df, x='Location', color='RainTomorrow', barmode='group')
+st.plotly_chart(fig1, use_container_width=True)
 
-# -----------------------------
-# Visualizations
-# -----------------------------
-st.write("### Visualizations")
+# 2️⃣ RainTomorrow by Month
+fig2 = px.histogram(df, x='Month', color='RainTomorrow', barmode='group')
+st.plotly_chart(fig2, use_container_width=True)
 
-# 1️⃣ RainTomorrow Count
-fig1, ax1 = plt.subplots(figsize=(5,4))
-if 'RainTomorrow' in filtered_df.columns and len(filtered_df) > 0:
-    sns.countplot(data=filtered_df, x='RainTomorrow', palette='Set2', ax=ax1)
-    ax1.set_title("RainTomorrow Distribution")
-st.pyplot(fig1)
+# 3️⃣ RainTomorrow by Season
+season_cols = ['Season_Spring','Season_Summer','Season_Winter']
+season_map = {'Season_Spring':'Spring','Season_Summer':'Summer','Season_Winter':'Winter'}
+season_counts = {}
+for col in season_cols:
+    if col in df.columns:
+        season_counts[season_map[col]] = df[df[col]==1]['RainTomorrow'].value_counts()
+season_df = pd.DataFrame(season_counts).T.fillna(0)
+st.bar_chart(season_df)
 
-# 2️⃣ Temp3pm Distribution (Violin)
-fig2, ax2 = plt.subplots(figsize=(5,4))
-if 'Temp3pm' in filtered_df.columns and 'RainTomorrow' in filtered_df.columns and len(filtered_df) > 0:
-    sns.violinplot(x='RainTomorrow', y='Temp3pm', data=filtered_df, palette='Set3', ax=ax2)
-st.pyplot(fig2)
+# 4️⃣ Rainfall distribution
+fig3 = px.histogram(df, x='Rainfall', nbins=50)
+st.plotly_chart(fig3, use_container_width=True)
 
-# 3️⃣ Humidity3pm Density (KDE)
-fig3, ax3 = plt.subplots(figsize=(6,4))
-if 'Humidity3pm' in filtered_df.columns and len(filtered_df) > 0:
-    sns.kdeplot(filtered_df['Humidity3pm'].dropna(), fill=True, color='skyblue', ax=ax3)
-st.pyplot(fig3)
+# 5️⃣ WindSpeed_mean distribution
+fig4 = px.histogram(df, x='WindSpeed_mean', nbins=30)
+st.plotly_chart(fig4, use_container_width=True)
 
-# 4️⃣ Rainfall vs WindSpeed Scatter
-fig4, ax4 = plt.subplots(figsize=(6,4))
-if 'Rainfall' in filtered_df.columns and 'WindSpeed_mean' in filtered_df.columns and 'RainTomorrow' in filtered_df.columns and len(filtered_df) > 0:
-    sns.scatterplot(data=filtered_df, x='WindSpeed_mean', y='Rainfall', hue='RainTomorrow', palette='coolwarm', ax=ax4)
-st.pyplot(fig4)
-
-# -----------------------------
-# ML Models Training (simplified)
-# -----------------------------
-st.write("### Model Training & Evaluation")
-feature_cols = ['Rainfall','Temp3pm','Humidity3pm','WindSpeed_mean']
-feature_cols = [col for col in feature_cols if col in df.columns]
-X = df[feature_cols]
-y = df['RainTomorrow_Code']
-X_scaled = StandardScaler().fit_transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
-
-models = {
-    "LogisticRegression": LogisticRegression(max_iter=1000),
-    "RandomForest": RandomForestClassifier(),
-    "GradientBoosting": GradientBoostingClassifier(),
-    "AdaBoost": AdaBoostClassifier(),
-    "DecisionTree": DecisionTreeClassifier(),
-}
-
-results = []
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    results.append({
-        "Model": name,
-        "Accuracy": accuracy_score(y_test, y_pred),
-        "F1": f1_score(y_test, y_pred),
-        "Precision": precision_score(y_test, y_pred),
-        "Recall": recall_score(y_test, y_pred)
-    })
-
-res_df = pd.DataFrame(results)
-st.dataframe(res_df)
-
-# -----------------------------
-# PCA 2D Plot
-# -----------------------------
-st.write("### PCA 2D Plot")
-pca = PCA(n_components=2)
-pca_res = pca.fit_transform(X_scaled)
-fig5 = px.scatter(x=pca_res[:,0], y=pca_res[:,1], color=y, hover_data=[df['Location']], title="PCA 2D Plot")
+# 6️⃣ Temp3pm distribution
+fig5 = px.histogram(df, x='Temp3pm', nbins=30)
 st.plotly_chart(fig5, use_container_width=True)
 
-# -----------------------------
-# Raw Data
-# -----------------------------
-with st.expander("Show Raw Data"):
-    st.dataframe(filtered_df)
+# 🔮 Prediction (مثال بسيط)
+st.markdown("### Rain Prediction Example")
+if st.button("Predict if it will rain tomorrow"):
+    st.info("Using RandomForestClassifier (example)")
+    # تجهيز الداتا
+    features = ['Rainfall','WindGustSpeed','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','WindSpeed_mean']
+    X = df[features].fillna(0)
+    y = df['RainTomorrow_enc']
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_scaled, y)
+    pred = model.predict(X_scaled)
+    df['Predicted_RainTomorrow'] = le_rain.inverse_transform(pred)
+    st.success("Prediction added to dataframe!")
+    st.dataframe(df[['Location','Month','Predicted_RainTomorrow']].head(10))

@@ -1,4 +1,4 @@
-# streamlit_app.py
+# streamlit_app_animated.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,13 +10,13 @@ from sklearn.linear_model import LogisticRegression
 # Page Config
 # ----------------------------
 st.set_page_config(
-    page_title="Weather AUS Prediction",
+    page_title="Weather AUS Animated",
     layout="wide",
     page_icon="🌦️"
 )
 
 # ----------------------------
-# CSS for light blue gradient + clouds & rain overlay
+# CSS for animated clouds & rain
 # ----------------------------
 st.markdown("""
     <style>
@@ -24,28 +24,56 @@ st.markdown("""
         background: linear-gradient(to bottom, #f0fbff, #ffffff);
         color: #0c1e3d;
         font-family: 'Arial', sans-serif;
+        overflow-x: hidden;
     }
+
     .stButton>button {
         background-color: #0c1e3d;
         color: white;
     }
-    .overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        pointer-events: none;
-        z-index: -1;
-        background: url('https://i.ibb.co/WD7zC6X/clouds.png') repeat-x,
-                    url('https://i.ibb.co/W6DhwkQ/rain.png') repeat-y;
-        background-size: contain, cover;
-        opacity: 0.3;
+
+    /* Rain animation */
+    @keyframes rainFall {
+        0% {top: -10%; }
+        100% {top: 100%; }
     }
+
+    .raindrop {
+        position: absolute;
+        width: 2px;
+        height: 15px;
+        background: #66b3ff;
+        animation: rainFall linear infinite;
+    }
+
+    /* Clouds animation */
+    @keyframes cloudMove {
+        0% {left: -20%; }
+        100% {left: 100%; }
+    }
+
+    .cloud {
+        position: absolute;
+        top: 10%;
+        width: 200px;
+        height: 60px;
+        background: url('https://i.ibb.co/WD7zC6X/clouds.png') no-repeat;
+        background-size: cover;
+        animation: cloudMove 60s linear infinite;
+    }
+
     </style>
-    <div class="overlay"></div>
+
+    <div class="cloud" style="top:5%; animation-duration: 90s;"></div>
+    <div class="cloud" style="top:20%; animation-duration: 120s;"></div>
+    <div class="cloud" style="top:35%; animation-duration: 100s;"></div>
+
+    <!-- Generate 50 raindrops -->
+    """ + "\n".join([f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.randint(1,3)}s;"></div>' for i in range(50)]) + """
 """, unsafe_allow_html=True)
 
 # ----------------------------
-# Load Data (Random Example for Multiple Cities)
+# Load Data (Random Example)
 # ----------------------------
 @st.cache_data
 def load_data():
@@ -94,7 +122,7 @@ filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_mo
 # ----------------------------
 # Title
 # ----------------------------
-st.title("🌦️ Weather AUS Prediction Dashboard")
+st.title("🌦️ Weather AUS Animated Dashboard")
 st.subheader(f"Location: {selected_location} | Month: {selected_month}")
 
 # ----------------------------
@@ -114,18 +142,15 @@ if not filtered_df.empty:
     # Charts
     # ----------------------------
     st.markdown("### 🌡️ Temperature Distribution")
-    fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, title="Temperature at 3 PM",
-                        color_discrete_sequence=["#a0d8ff"])
+    fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, color_discrete_sequence=["#a0d8ff"])
     st.plotly_chart(fig1, use_container_width=True)
 
     st.markdown("### 💧 Rainfall Distribution")
-    fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, title="Rainfall (mm)",
-                        color_discrete_sequence=["#66b3ff"])
+    fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, color_discrete_sequence=["#66b3ff"])
     st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown("### 🌬️ Humidity Distribution")
-    fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, title="Humidity at 3 PM (%)",
-                        color_discrete_sequence=["#99ccff"])
+    fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, color_discrete_sequence=["#99ccff"])
     st.plotly_chart(fig3, use_container_width=True)
 
     # ----------------------------

@@ -1,4 +1,4 @@
-# streamlit_rain_dashboard.py
+# streamlit_rain_fullpage.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -17,10 +17,25 @@ st.set_page_config(
 )
 
 # ----------------------------
-# Background Animation (Rain & Clouds)
+# Full-page Background Animation (Rain + Clouds)
 # ----------------------------
 rain_html = """
-<canvas id="rainCanvas" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1;"></canvas>
+<style>
+html, body, [class*="css"]  {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    overflow: hidden;
+    background: #cceeff;
+}
+canvas {
+    position: fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    z-index:-1;
+}
+</style>
+<canvas id="rainCanvas"></canvas>
 <script>
 const canvas = document.getElementById('rainCanvas');
 const ctx = canvas.getContext('2d');
@@ -32,7 +47,7 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 const drops = [];
-for(let i=0;i<300;i++){
+for(let i=0;i<400;i++){
     drops.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, l: Math.random()*20+10, xs: Math.random()*2-1, ys: Math.random()*4+4});
 }
 
@@ -43,17 +58,16 @@ function draw(){
 
     // Clouds
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath();
-    ctx.arc(200,100,60,0,Math.PI*2);
-    ctx.arc(260,100,60,0,Math.PI*2);
-    ctx.arc(230,80,50,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(600,150,50,0,Math.PI*2);
-    ctx.arc(650,150,50,0,Math.PI*2);
-    ctx.arc(625,130,40,0,Math.PI*2);
-    ctx.fill();
+    function cloud(x,y){
+        ctx.beginPath();
+        ctx.arc(x,y,50,0,Math.PI*2);
+        ctx.arc(x+40,y,50,0,Math.PI*2);
+        ctx.arc(x+20,y-20,40,0,Math.PI*2);
+        ctx.fill();
+    }
+    cloud(150,100);
+    cloud(600,150);
+    cloud(400,80);
 
     // Raindrops
     ctx.strokeStyle = 'rgba(153,214,255,0.8)';
@@ -64,7 +78,6 @@ function draw(){
         ctx.moveTo(d.x,d.y);
         ctx.lineTo(d.x+d.xs, d.y+d.l);
         ctx.stroke();
-
         d.x += d.xs;
         d.y += d.ys;
         if(d.y > canvas.height){
@@ -74,14 +87,13 @@ function draw(){
     }
     requestAnimationFrame(draw);
 }
-
 draw();
 </script>
 """
 components.html(rain_html, height=600)
 
 # ----------------------------
-# Load Data (Random Example)
+# Load Data
 # ----------------------------
 @st.cache_data
 def load_data():

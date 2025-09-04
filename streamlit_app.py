@@ -17,7 +17,7 @@ from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBRFClassifier
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.decomposition import PCA
 import plotly.express as px
 
@@ -27,7 +27,7 @@ import plotly.express as px
 st.set_page_config(layout="wide", page_title="🌦️ WeatherAUS Dashboard")
 
 # -----------------------------
-# CSS for background and rain
+# CSS for background and rain effect
 # -----------------------------
 st.markdown("""
 <style>
@@ -59,9 +59,7 @@ for(let i=0;i<150;i++){
 @st.cache_data
 def load_data():
     df = pd.read_csv("weatherAUS.csv")
-    
-    # إزالة أي فراغات من أسماء الأعمدة
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # إزالة الفراغات
     
     # تحويل Month إلى integer
     df['Month'] = df['Month'].astype(int)
@@ -93,7 +91,7 @@ st.sidebar.title("Filters")
 selected_location = st.sidebar.selectbox("Select Location", df['Location'].unique())
 selected_month = st.sidebar.slider("Select Month (1-12)", 1, 12, 1)
 
-filtered_df = df[(df['Location'] == selected_location) & (df['Month'] == selected_month)]
+filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
 
 st.title(f"🌦️ Weather Dashboard: {selected_location} | Month {selected_month}")
 

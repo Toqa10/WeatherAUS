@@ -59,18 +59,29 @@ for(let i=0;i<150;i++){
 @st.cache_data
 def load_data():
     df = pd.read_csv("weatherAUS.csv")
+    
+    # إزالة أي فراغات من أسماء الأعمدة
+    df.columns = df.columns.str.strip()
+    
+    # تحويل Month إلى integer
+    df['Month'] = df['Month'].astype(int)
+    
     # Encode categorical
     df['RainTomorrow_Code'] = df['RainTomorrow'].map({'Yes':1,'No':0})
     df['RainToday_Code'] = df['RainToday'].map({'Yes':1,'No':0})
+    
     le_loc = LabelEncoder()
     df['Location_Code'] = le_loc.fit_transform(df['Location'])
+    
     # Create WindSpeed_mean if not exists
     if 'WindSpeed_mean' not in df.columns:
         df['WindSpeed_mean'] = df[['WindGustSpeed']].mean(axis=1)
+    
     # Fill missing numerical values with median
     num_cols = ['Rainfall','Temp3pm','Humidity3pm','WindSpeed_mean']
     for col in num_cols:
         df[col] = df[col].fillna(df[col].median())
+    
     return df, le_loc
 
 df, le_location = load_data()
@@ -82,7 +93,7 @@ st.sidebar.title("Filters")
 selected_location = st.sidebar.selectbox("Select Location", df['Location'].unique())
 selected_month = st.sidebar.slider("Select Month (1-12)", 1, 12, 1)
 
-filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
+filtered_df = df[(df['Location'] == selected_location) & (df['Month'] == selected_month)]
 
 st.title(f"🌦️ Weather Dashboard: {selected_location} | Month {selected_month}")
 
@@ -177,7 +188,6 @@ st.dataframe(res_df)
 st.write("### PCA & KMeans Clustering")
 pca = PCA(n_components=2)
 pca_res = pca.fit_transform(X_scaled)
-kmeans = ExtraTreesClassifier(n_estimators=100, random_state=42).fit(X_scaled)  # example clustering placeholder
 fig5 = px.scatter(x=pca_res[:,0], y=pca_res[:,1], color=y, hover_data=[df['Location']], title="PCA 2D Plot")
 st.plotly_chart(fig5, use_container_width=True)
 

@@ -3,6 +3,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 # ----------------------------
 # Page Config
@@ -14,12 +17,12 @@ st.set_page_config(
 )
 
 # ----------------------------
-# CSS for bright gradient background, clouds & rain
+# CSS for gradient background + clouds & rain overlay
 # ----------------------------
 st.markdown("""
     <style>
     body {
-        background: linear-gradient(to bottom, #d0e7ff, #f0f9ff); /* أفتح من السابق */
+        background: linear-gradient(to bottom, #d0e7ff, #f0f9ff);
         color: #0c1e3d;
         font-family: 'Arial', sans-serif;
     }
@@ -27,7 +30,6 @@ st.markdown("""
         background-color: #0c1e3d;
         color: white;
     }
-    /* Clouds & Rain overlay */
     .overlay {
         position: fixed;
         top: 0; left: 0;
@@ -44,11 +46,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ----------------------------
-# Load Data (Example Data)
+# Load Data (Example)
 # ----------------------------
 @st.cache_data
 def load_data():
-    # مثال بيانات لتجربة التطبيق
     data = {
         "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth"], 200),
         "Month": np.random.randint(1,13,200),
@@ -63,27 +64,47 @@ def load_data():
 df = load_data()
 
 # ----------------------------
+# Encode categorical
+# ----------------------------
+le_location = LabelEncoder()
+df['Location_enc'] = le_location.fit_transform(df['Location'])
+
+le_target = LabelEncoder()
+df['RainTomorrow_enc'] = le_target.fit_transform(df['RainTomorrow'])
+
+# ----------------------------
+# Features & Model
+# ----------------------------
+features = ['Location_enc','Month','Rainfall','Temp3pm','Humidity3pm']
+X = df[features]
+y = df['RainTomorrow_enc']
+
+model = LogisticRegression()
+model.fit(X, y)
+
+# ----------------------------
 # Sidebar Filters
 # ----------------------------
 st.sidebar.header("Filters")
-locations = df['Location'].unique()
-selected_location = st.sidebar.selectbox("Select Location", locations)
-
-months = sorted(df['Month'].unique())
-selected_month = st.sidebar.selectbox("Select Month", months)
+selected_location = st.sidebar.selectbox("Select Location", df['Location'].unique())
+selected_month = st.sidebar.selectbox("Select Month", sorted(df['Month'].unique()))
 
 filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
 
 # ----------------------------
-# Main Title
+# Title
 # ----------------------------
 st.title("🌦️ Weather AUS Prediction Dashboard")
 st.subheader(f"Location: {selected_location} | Month: {selected_month}")
 
 # ----------------------------
-# Prediction Widget (Mock)
+# Prediction
 # ----------------------------
-rain_count = filtered_df['RainTomorrow'].value_counts()
+X_pred = filtered_df[features]
+y_pred = model.predict(X_pred)
+filtered_df['Predicted_RainTomorrow'] = le_target.inverse_transform(y_pred)
+
+rain_count = filtered_df['Predicted_RainTomorrow'].value_counts()
 pred_text = "🌧️ Rain Tomorrow" if rain_count.get("Yes",0) > rain_count.get("No",0) else "☀️ No Rain"
 st.markdown(f"<h2 style='color:#0c1e3d'>{pred_text}</h2>", unsafe_allow_html=True)
 
@@ -106,7 +127,7 @@ fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, title="Humidity at 3
 st.plotly_chart(fig3, use_container_width=True)
 
 # ----------------------------
-# Show filtered data
+# Show Data
 # ----------------------------
 st.markdown("### 🗂️ Data Preview")
-st.dataframe(filtered_df.head(10))
+st.dataframe(filtered_df[['Location','Month','Temp3pm','Rainfall','Humidity3pm','Predicted_RainTomorrow']].head(10))

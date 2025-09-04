@@ -1,132 +1,111 @@
-# streamlit_app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import plotly.graph_objects as go
+import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+import pickle
 
-# ----------------------------
-# Page Config
-# ----------------------------
-st.set_page_config(
-    page_title="Weather AUS Prediction",
-    layout="wide",
-    page_icon="🌦️"
-)
+# ---------- Streamlit Page Config ----------
+st.set_page_config(page_title="WeatherAUS Rain Prediction",
+                   layout="wide",
+                   page_icon="🌧️")
 
-# ----------------------------
-# CSS for gradient background + clouds & rain overlay
-# ----------------------------
-st.markdown("""
-    <style>
-    body {
-        background: linear-gradient(to bottom, #e0f0ff, #f7fcff);
-        color: #0c1e3d;
-        font-family: 'Arial', sans-serif;
-    }
-    .stButton>button {
-        background-color: #0c1e3d;
-        color: white;
-    }
-    .overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        pointer-events: none;
-        z-index: -1;
-        background: url('https://i.ibb.co/WD7zC6X/clouds.png') repeat-x,
-                    url('https://i.ibb.co/W6DhwkQ/rain.png') repeat-y;
-        background-size: cover, cover;
-        opacity: 0.25;
-    }
-    </style>
-    <div class="overlay"></div>
-""", unsafe_allow_html=True)
+st.title("🌦️ WeatherAUS Rain Prediction Dashboard")
 
-# ----------------------------
-# Load Data (Example Random Data)
-# ----------------------------
+# ---------- Load Data ----------
 @st.cache_data
 def load_data():
-    data = {
-        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth"], 300),
-        "Month": np.random.randint(1,13,300),
-        "RainTomorrow": np.random.choice(["Yes","No"], 300),
-        "Rainfall": np.random.rand(300)*20,
-        "Temp3pm": np.random.rand(300)*15+15,
-        "Humidity3pm": np.random.randint(30,100,300)
-    }
-    df = pd.DataFrame(data)
-    return df
+    df = pd.read_csv("weatherAUS.csv")
+    # Encode categorical columns
+    le_location = LabelEncoder()
+    df['Location_enc'] = le_location.fit_transform(df['Location'])
+    
+    le_rain_today = LabelEncoder()
+    df['RainToday_enc'] = le_rain_today.fit_transform(df['RainToday'])
+    
+    le_rain_tomorrow = LabelEncoder()
+    df['RainTomorrow_enc'] = le_rain_tomorrow.fit_transform(df['RainTomorrow'])
+    
+    # Fill missing numeric values
+    numeric_cols = ['Rainfall','WindGustSpeed','WindSpeed_mean','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','RISK_MM']
+    for col in numeric_cols:
+        df[col] = df[col].fillna(df[col].median())
+    
+    # Fill missing categorical
+    df['WindGustDir'] = df['WindGustDir'].fillna('None')
+    df['WindDir9am'] = df['WindDir9am'].fillna('None')
+    df['WindDir3pm'] = df['WindDir3pm'].fillna('None')
+    
+    return df, le_location, le_rain_today, le_rain_tomorrow
 
-df = load_data()
+df, le_location, le_rain_today, le_rain_tomorrow = load_data()
 
-# ----------------------------
-# Encode categorical
-# ----------------------------
-le_location = LabelEncoder()
-df['Location_enc'] = le_location.fit_transform(df['Location'])
+# ---------- Background Gradient + Cloud/Mist Simulation ----------
+fig_bg = go.Figure()
+fig_bg.update_layout(
+    xaxis=dict(visible=False),
+    yaxis=dict(visible=False),
+    paper_bgcolor='lightblue',
+    plot_bgcolor='lightblue',
+    margin=dict(l=0,r=0,t=0,b=0),
+    height=300
+)
+# Add simple cloud/mist effect using shapes
+fig_bg.add_shape(type="circle", x0=0.1, y0=0.7, x1=0.3, y1=0.9, fillcolor="white", line_color="white")
+fig_bg.add_shape(type="circle", x0=0.2, y0=0.6, x1=0.4, y1=0.8, fillcolor="white", line_color="white")
+fig_bg.add_shape(type="circle", x0=0.6, y0=0.7, x1=0.8, y1=0.9, fillcolor="white", line_color="white")
+fig_bg.add_shape(type="circle", x0=0.7, y0=0.6, x1=0.9, y1=0.8, fillcolor="white", line_color="white")
+st.plotly_chart(fig_bg, use_container_width=True)
 
-le_target = LabelEncoder()
-df['RainTomorrow_enc'] = le_target.fit_transform(df['RainTomorrow'])
-
-# ----------------------------
-# Features & Model
-# ----------------------------
-features = ['Location_enc','Month','Rainfall','Temp3pm','Humidity3pm']
-X = df[features]
-y = df['RainTomorrow_enc']
-
-model = LogisticRegression()
-model.fit(X, y)
-
-# ----------------------------
-# Sidebar Filters
-# ----------------------------
+# ---------- Sidebar Filters ----------
 st.sidebar.header("Filters")
 selected_location = st.sidebar.selectbox("Select Location", df['Location'].unique())
-selected_month = st.sidebar.selectbox("Select Month", sorted(df['Month'].unique()))
+selected_month = st.sidebar.selectbox("Select Month", sorted(df['Month'].dropna().unique()))
 
+# ---------- Filter Data ----------
 filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
 
-# ----------------------------
-# Title
-# ----------------------------
-st.title("🌦️ Weather AUS Prediction Dashboard")
-st.subheader(f"Location: {selected_location} | Month: {selected_month}")
+# ---------- Train a simple model ----------
+feature_cols = ['Rainfall','WindGustSpeed','WindSpeed_mean','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','RISK_MM','RainToday_enc']
+X = df[feature_cols]
+y = df['RainTomorrow_enc']
 
-# ----------------------------
-# Prediction
-# ----------------------------
-X_pred = filtered_df[features]
-y_pred = model.predict(X_pred)
-filtered_df['Predicted_RainTomorrow'] = le_target.inverse_transform(y_pred)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X, y)
 
-rain_count = filtered_df['Predicted_RainTomorrow'].value_counts()
-pred_text = "🌧️ Rain Tomorrow" if rain_count.get("Yes",0) > rain_count.get("No",0) else "☀️ No Rain"
-st.markdown(f"<h2 style='color:#0c1e3d'>{pred_text}</h2>", unsafe_allow_html=True)
+# Predict on filtered data
+filtered_df['Predicted_RainTomorrow'] = model.predict(filtered_df[feature_cols])
+filtered_df['Predicted_RainTomorrow_label'] = le_rain_tomorrow.inverse_transform(filtered_df['Predicted_RainTomorrow'])
 
-# ----------------------------
-# Charts
-# ----------------------------
-st.markdown("### 🌡️ Temperature Distribution")
-fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, title="Temperature at 3 PM",
-                    color_discrete_sequence=["#66c2ff"])
-st.plotly_chart(fig1, use_container_width=True)
+# ---------- Display Data ----------
+st.subheader(f"Data Preview for {selected_location} in Month {selected_month}")
+st.dataframe(filtered_df[['Location','Month','RainTomorrow','Predicted_RainTomorrow_label']].head(10))
 
-st.markdown("### 💧 Rainfall Distribution")
-fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, title="Rainfall (mm)",
-                    color_discrete_sequence=["#3399ff"])
-st.plotly_chart(fig2, use_container_width=True)
+# ---------- Charts ----------
+st.subheader("RainTomorrow Count by Season")
+season_cols = ['Season_Spring','Season_Summer','Season_Winter']
+season_mapping = {'Season_Spring':'Spring','Season_Summer':'Summer','Season_Winter':'Winter'}
+season_counts = {}
+for col in season_cols:
+    season_counts[season_mapping[col]] = filtered_df[filtered_df[col]==1]['RainTomorrow'].value_counts()
+season_df = pd.DataFrame(season_counts).T.fillna(0)
+season_df = season_df.rename(columns={'No':'No Rain','Yes':'Rain'})
+st.bar_chart(season_df)
 
-st.markdown("### 🌬️ Humidity Distribution")
-fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, title="Humidity at 3 PM (%)",
-                    color_discrete_sequence=["#99ccff"])
-st.plotly_chart(fig3, use_container_width=True)
+st.subheader("Humidity Distribution")
+fig_hum = plt.figure(figsize=(6,4))
+sns.histplot(filtered_df['Humidity9am'], bins=20, kde=True, color='skyblue')
+st.pyplot(fig_hum)
 
-# ----------------------------
-# Show Data
-# ----------------------------
-st.markdown("### 🗂️ Data Preview")
-st.dataframe(filtered_df[['Location','Month','Temp3pm','Rainfall','Humidity3pm','Predicted_RainTomorrow']].head(10))
+st.subheader("Temperature Distribution")
+fig_temp = plt.figure(figsize=(6,4))
+sns.histplot(filtered_df['Temp3pm'], bins=20, kde=True, color='orange')
+st.pyplot(fig_temp)
+
+st.subheader("Rainfall vs Wind Speed")
+fig_rw = plt.figure(figsize=(6,4))
+sns.scatterplot(data=filtered_df, x='WindSpeed_mean', y='Rainfall', hue='Predicted_RainTomorrow_label', palette=['green','blue'])
+st.pyplot(fig_rw)

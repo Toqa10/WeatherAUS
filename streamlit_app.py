@@ -21,8 +21,8 @@ st.markdown(
     .stApp {
         background: linear-gradient(to bottom, #cceeff, #ffffff);
     }
-    .css-1aumxhk {
-        color: #034f84;
+    .css-1aumxhk, .css-1v3fvcr { 
+        color: #034f84;  /* لون النص الأساسي */
     }
     </style>
     """, unsafe_allow_html=True
@@ -34,8 +34,10 @@ st.write("اسأل عن توقعات المطر لأي مدينة وأي شهر!
 # ---- تحميل البيانات ----
 @st.cache_data
 def load_data():
-    # هنا هنستخدم نسخة صغيرة من البيانات لو موجودة
-    df = pd.read_csv("weatherAUS_small.csv")  # نسخة صغيرة لتجنب مشاكل الحجم
+    df = pd.read_csv("weatherAUS.csv")  # الملف الأصلي
+    # تأكد من الأعمدة المطلوبة
+    required_cols = ['Location','Month','Rainfall','WindGustSpeed','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','WindSpeed_mean','RainTomorrow']
+    df = df[required_cols].dropna()  # إزالة الصفوف الناقصة
     df['Month'] = df['Month'].astype(int)
     le_location = LabelEncoder()
     df['Location_enc'] = le_location.fit_transform(df['Location'])
@@ -66,6 +68,7 @@ filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_mo
 if not filtered_df.empty:
     X = filtered_df[['Rainfall','WindGustSpeed','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','WindSpeed_mean']]
     prediction = model.predict(X)
+    filtered_df = filtered_df.copy()
     filtered_df['Predicted_RainTomorrow'] = prediction
 
     st.subheader(f"توقع المطر في {selected_location} لشهر {selected_month}")

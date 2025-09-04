@@ -1,4 +1,4 @@
-# weather_dashboard_app_sound.py
+# weather_dashboard_full_animation.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,13 +10,13 @@ import plotly.express as px
 # Page Config
 # ----------------------------
 st.set_page_config(
-    page_title="🌦️ Weather AUS Dashboard",
+    page_title="🌦️ Weather AUS Full Animation Dashboard",
     layout="wide",
     page_icon="🌦️"
 )
 
 # ----------------------------
-# CSS for light blue gradient + clouds & rain animation
+# CSS for gradient background + animated clouds & rain
 # ----------------------------
 st.markdown("""
 <style>
@@ -33,13 +33,13 @@ body {
 
 /* Clouds Animation */
 @keyframes cloudMove {
-    0% {left: -25%; }
-    100% {left: 100%; }
+    0% {left: -25%;}
+    100% {left: 100%;}
 }
 .cloud {
     position: absolute;
-    width: 200px;
-    height: 60px;
+    width: 250px;
+    height: 80px;
     background: url('https://i.ibb.co/WD7zC6X/clouds.png') no-repeat;
     background-size: cover;
     animation: cloudMove linear infinite;
@@ -68,7 +68,7 @@ body {
 <div class="cloud cloud2"></div>
 <div class="cloud cloud3"></div>
 
-""" + "\n".join([f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.randint(2,4)}s;"></div>' for i in range(50)]) +
+""" + "\n".join([f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.uniform(1.5,3)}s;"></div>' for i in range(50)]) +
 """
 <audio autoplay loop>
   <source src="https://www.soundjay.com/nature/rain-01.mp3" type="audio/mpeg">
@@ -81,7 +81,9 @@ body {
 @st.cache_data
 def load_data():
     data = {
-        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart"], 500),
+        "Location": np.random.choice(
+            ["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart","Darwin","Canberra"], 500
+        ),
         "Month": np.random.randint(1,13,500),
         "RainTomorrow": np.random.choice(["Yes","No"], 500),
         "Rainfall": np.random.rand(500)*20,
@@ -124,7 +126,7 @@ filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_mo
 # ----------------------------
 # Title & Prediction
 # ----------------------------
-st.title("🌦️ Weather AUS Prediction Dashboard")
+st.title("🌦️ Weather AUS Full Animation Dashboard")
 st.subheader(f"Location: {selected_location} | Month: {selected_month}")
 
 X_pred = filtered_df[features]

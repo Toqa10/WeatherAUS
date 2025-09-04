@@ -5,7 +5,6 @@ import numpy as np
 import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
 
 # ----------------------------
 # Page Config
@@ -22,7 +21,7 @@ st.set_page_config(
 st.markdown("""
     <style>
     body {
-        background: linear-gradient(to bottom, #d0e7ff, #f0f9ff);
+        background: linear-gradient(to bottom, #e0f0ff, #f7fcff);
         color: #0c1e3d;
         font-family: 'Arial', sans-serif;
     }
@@ -39,24 +38,24 @@ st.markdown("""
         background: url('https://i.ibb.co/WD7zC6X/clouds.png') repeat-x,
                     url('https://i.ibb.co/W6DhwkQ/rain.png') repeat-y;
         background-size: cover, cover;
-        opacity: 0.15;
+        opacity: 0.25;
     }
     </style>
     <div class="overlay"></div>
 """, unsafe_allow_html=True)
 
 # ----------------------------
-# Load Data (Example)
+# Load Data (Example Random Data)
 # ----------------------------
 @st.cache_data
 def load_data():
     data = {
-        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth"], 200),
-        "Month": np.random.randint(1,13,200),
-        "RainTomorrow": np.random.choice(["Yes","No"], 200),
-        "Rainfall": np.random.rand(200)*20,
-        "Temp3pm": np.random.rand(200)*15+15,
-        "Humidity3pm": np.random.randint(30,100,200)
+        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth"], 300),
+        "Month": np.random.randint(1,13,300),
+        "RainTomorrow": np.random.choice(["Yes","No"], 300),
+        "Rainfall": np.random.rand(300)*20,
+        "Temp3pm": np.random.rand(300)*15+15,
+        "Humidity3pm": np.random.randint(30,100,300)
     }
     df = pd.DataFrame(data)
     return df
@@ -113,17 +112,17 @@ st.markdown(f"<h2 style='color:#0c1e3d'>{pred_text}</h2>", unsafe_allow_html=Tru
 # ----------------------------
 st.markdown("### 🌡️ Temperature Distribution")
 fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, title="Temperature at 3 PM",
-                    color_discrete_sequence=["#4da6ff"])
+                    color_discrete_sequence=["#66c2ff"])
 st.plotly_chart(fig1, use_container_width=True)
 
 st.markdown("### 💧 Rainfall Distribution")
 fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, title="Rainfall (mm)",
-                    color_discrete_sequence=["#1f77b4"])
+                    color_discrete_sequence=["#3399ff"])
 st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("### 🌬️ Humidity Distribution")
 fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, title="Humidity at 3 PM (%)",
-                    color_discrete_sequence=["#7fbfff"])
+                    color_discrete_sequence=["#99ccff"])
 st.plotly_chart(fig3, use_container_width=True)
 
 # ----------------------------

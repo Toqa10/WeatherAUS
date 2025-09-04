@@ -1,4 +1,4 @@
-# weather_dashboard_full_animation.py
+# weather_dashboard_realistic_rain.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,18 +10,18 @@ import plotly.express as px
 # Page Config
 # ----------------------------
 st.set_page_config(
-    page_title="🌦️ Weather AUS Full Animation Dashboard",
+    page_title="🌦️ Weather AUS Realistic Rain Dashboard",
     layout="wide",
     page_icon="🌦️"
 )
 
 # ----------------------------
-# CSS for gradient background + animated clouds & rain
+# CSS for realistic rain + clouds + light blue background
 # ----------------------------
 st.markdown("""
 <style>
 body {
-    background: linear-gradient(to bottom, #e6f7ff, #ffffff);
+    background: linear-gradient(to bottom, #b3e0ff, #e6f7ff);
     color: #0c1e3d;
     font-family: 'Arial', sans-serif;
     overflow-x: hidden;
@@ -33,7 +33,7 @@ body {
 
 /* Clouds Animation */
 @keyframes cloudMove {
-    0% {left: -25%;}
+    0% {left: -30%;}
     100% {left: 100%;}
 }
 .cloud {
@@ -49,18 +49,19 @@ body {
 .cloud2 { top:20%; animation-duration: 120s; }
 .cloud3 { top:35%; animation-duration: 100s; }
 
-/* Raindrops Animation */
+/* Realistic Raindrops */
 @keyframes rainFall {
-    0% {top: -10%; }
-    100% {top: 100%; }
+    0% {top: -15%; }
+    100% {top: 105%; }
 }
 .raindrop {
     position: absolute;
     width: 2px;
-    height: 15px;
+    height: 20px;
     background: #99d6ff;
     animation: rainFall linear infinite;
-    opacity: 0.6;
+    opacity: 0.7;
+    border-radius: 50%;
 }
 </style>
 
@@ -68,8 +69,10 @@ body {
 <div class="cloud cloud2"></div>
 <div class="cloud cloud3"></div>
 
-""" + "\n".join([f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.uniform(1.5,3)}s;"></div>' for i in range(50)]) +
-"""
+""" + "\n".join([
+    f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.uniform(0.8,1.5)}s;"></div>'
+    for i in range(50)
+]) + """
 <audio autoplay loop>
   <source src="https://www.soundjay.com/nature/rain-01.mp3" type="audio/mpeg">
 </audio>
@@ -126,7 +129,7 @@ filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_mo
 # ----------------------------
 # Title & Prediction
 # ----------------------------
-st.title("🌦️ Weather AUS Full Animation Dashboard")
+st.title("🌦️ Weather AUS Realistic Rain Dashboard")
 st.subheader(f"Location: {selected_location} | Month: {selected_month}")
 
 X_pred = filtered_df[features]

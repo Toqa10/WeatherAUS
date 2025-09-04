@@ -56,7 +56,7 @@ if 'Month' in df.columns and df['Month'].notna().any():
 else:
     months = []
     selected_month = None
-    st.sidebar.warning("⚠️ Column 'Month' missing or empty, month filter ignored.")
+    st.sidebar.info("Month filter ignored (column missing).")
 
 # فلترة الداتا حسب البلد والشهر
 if selected_month is not None:
@@ -114,5 +114,12 @@ if st.button("Predict if it will rain tomorrow"):
     model.fit(X_scaled, y)
     pred = model.predict(X_scaled)
     filtered_df['Predicted_RainTomorrow'] = le_rain.inverse_transform(pred)
+
     st.success("✅ Prediction added!")
-    st.dataframe(filtered_df[['Location','Month','Predicted_RainTomorrow']].head(10))
+
+    # التحقق من الأعمدة قبل عرضها
+    display_cols = ['Location','Predicted_RainTomorrow']
+    if 'Month' in filtered_df.columns:
+        display_cols.insert(1, 'Month')  # ضيف Month لو موجود
+
+    st.dataframe(filtered_df[display_cols].head(10))

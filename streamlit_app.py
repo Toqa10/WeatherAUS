@@ -9,49 +9,18 @@ import os
 
 st.set_page_config(page_title="Weather AUS Prediction", layout="wide")
 
-# 🎨 تصميم الواجهة مع المطر المتحرك
+# 🎨 تصميم الواجهة
 st.markdown(
     """
     <style>
     .stApp {
         background: linear-gradient(to bottom, #a2d5f2, #ffffff);
+        color: #000;
     }
-    /* المطر */
-    .rain {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 9999;
-    }
-    .raindrop {
-      position: absolute;
-      width: 2px;
-      height: 10px;
-      background: white;
-      opacity: 0.6;
-      animation: fall linear infinite;
-    }
-    @keyframes fall {
-      0% {transform: translateY(-10px);}
-      100% {transform: translateY(100vh);}
+    .stDataFrame div {
+        color: black;
     }
     </style>
-    <div class="rain" id="rain"></div>
-    <script>
-    const rain = document.getElementById("rain");
-    for(let i=0;i<150;i++){
-        let drop = document.createElement("div");
-        drop.className="raindrop";
-        drop.style.left=Math.random()*100+"%";
-        drop.style.animationDuration=(0.5+Math.random()*0.5)+"s";
-        drop.style.animationDelay=(Math.random()*5)+"s";
-        rain.appendChild(drop);
-    }
-    </script>
     """,
     unsafe_allow_html=True
 )
@@ -68,60 +37,75 @@ if not os.path.exists(csv_path):
 df = pd.read_csv(csv_path)
 
 # تحويل أعمدة النصوص لأرقام
-le_rain = LabelEncoder()
-df['RainTomorrow_enc'] = le_rain.fit_transform(df['RainTomorrow'])
+if 'RainTomorrow' in df.columns:
+    le_rain = LabelEncoder()
+    df['RainTomorrow_enc'] = le_rain.fit_transform(df['RainTomorrow'])
+else:
+    st.error("⚠️ Column 'RainTomorrow' not found!")
+    st.stop()
 
-# Sidebar لاختيار Location و Month
+# Sidebar: Location
 st.sidebar.header("Filters")
-locations = df['Location'].unique()
+locations = df['Location'].dropna().unique()
 selected_location = st.sidebar.selectbox("Select Location", locations)
-months = sorted(df['Month'].dropna().unique())
-selected_month = st.sidebar.selectbox("Select Month", months)
+
+# Sidebar: Month (تحقق من العمود)
+if 'Month' in df.columns and df['Month'].notna().any():
+    months = sorted(df['Month'].dropna().unique())
+    selected_month = st.sidebar.selectbox("Select Month", months)
+else:
+    months = []
+    selected_month = None
+    st.sidebar.warning("⚠️ Column 'Month' missing or empty, month filter ignored.")
 
 # فلترة الداتا
-filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
+if selected_month is not None:
+    filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
+else:
+    filtered_df = df[df['Location']==selected_location]
 
-st.markdown(f"### Weather data for {selected_location}, Month {selected_month}")
+st.markdown(f"### Weather data for {selected_location}" + (f", Month {selected_month}" if selected_month else ""))
 st.dataframe(filtered_df)
 
 # 👁️ Visualizations
 
 # 1️⃣ RainTomorrow by Location
-fig1 = px.histogram(df, x='Location', color='RainTomorrow', barmode='group')
-st.plotly_chart(fig1, use_container_width=True)
+if 'RainTomorrow' in df.columns:
+    fig1 = px.histogram(df, x='Location', color='RainTomorrow', barmode='group')
+    st.plotly_chart(fig1, use_container_width=True)
 
-# 2️⃣ RainTomorrow by Month
-fig2 = px.histogram(df, x='Month', color='RainTomorrow', barmode='group')
-st.plotly_chart(fig2, use_container_width=True)
-
-# 3️⃣ RainTomorrow by Season
+# 2️⃣ RainTomorrow by Season
 season_cols = ['Season_Spring','Season_Summer','Season_Winter']
 season_map = {'Season_Spring':'Spring','Season_Summer':'Summer','Season_Winter':'Winter'}
 season_counts = {}
 for col in season_cols:
     if col in df.columns:
         season_counts[season_map[col]] = df[df[col]==1]['RainTomorrow'].value_counts()
-season_df = pd.DataFrame(season_counts).T.fillna(0)
-st.bar_chart(season_df)
+if season_counts:
+    season_df = pd.DataFrame(season_counts).T.fillna(0)
+    st.bar_chart(season_df)
 
-# 4️⃣ Rainfall distribution
-fig3 = px.histogram(df, x='Rainfall', nbins=50)
-st.plotly_chart(fig3, use_container_width=True)
+# 3️⃣ Rainfall distribution
+if 'Rainfall' in df.columns:
+    fig3 = px.histogram(df, x='Rainfall', nbins=50)
+    st.plotly_chart(fig3, use_container_width=True)
 
-# 5️⃣ WindSpeed_mean distribution
-fig4 = px.histogram(df, x='WindSpeed_mean', nbins=30)
-st.plotly_chart(fig4, use_container_width=True)
+# 4️⃣ WindSpeed_mean distribution
+if 'WindSpeed_mean' in df.columns:
+    fig4 = px.histogram(df, x='WindSpeed_mean', nbins=30)
+    st.plotly_chart(fig4, use_container_width=True)
 
-# 6️⃣ Temp3pm distribution
-fig5 = px.histogram(df, x='Temp3pm', nbins=30)
-st.plotly_chart(fig5, use_container_width=True)
+# 5️⃣ Temp3pm distribution
+if 'Temp3pm' in df.columns:
+    fig5 = px.histogram(df, x='Temp3pm', nbins=30)
+    st.plotly_chart(fig5, use_container_width=True)
 
-# 🔮 Prediction (مثال بسيط)
+# 🔮 Prediction Example
 st.markdown("### Rain Prediction Example")
 if st.button("Predict if it will rain tomorrow"):
     st.info("Using RandomForestClassifier (example)")
-    # تجهيز الداتا
     features = ['Rainfall','WindGustSpeed','Humidity9am','Humidity3pm','Pressure3pm','Temp3pm','WindSpeed_mean']
+    features = [f for f in features if f in df.columns]
     X = df[features].fillna(0)
     y = df['RainTomorrow_enc']
     scaler = StandardScaler()
@@ -130,5 +114,5 @@ if st.button("Predict if it will rain tomorrow"):
     model.fit(X_scaled, y)
     pred = model.predict(X_scaled)
     df['Predicted_RainTomorrow'] = le_rain.inverse_transform(pred)
-    st.success("Prediction added to dataframe!")
+    st.success("✅ Prediction added to dataframe!")
     st.dataframe(df[['Location','Month','Predicted_RainTomorrow']].head(10))

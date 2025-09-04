@@ -1,4 +1,4 @@
-# weather_dashboard_app.py
+# weather_dashboard_app_sound.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -70,6 +70,9 @@ body {
 
 """ + "\n".join([f'<div class="raindrop" style="left:{i*2}%; animation-duration:{np.random.randint(2,4)}s;"></div>' for i in range(50)]) +
 """
+<audio autoplay loop>
+  <source src="https://www.soundjay.com/nature/rain-01.mp3" type="audio/mpeg">
+</audio>
 """, unsafe_allow_html=True)
 
 # ----------------------------

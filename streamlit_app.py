@@ -27,58 +27,38 @@ import plotly.express as px
 st.set_page_config(layout="wide", page_title="🌦️ WeatherAUS Dashboard")
 
 # -----------------------------
-# CSS for background and rain effect
-# -----------------------------
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(to bottom, #a0c4ff, #caf0f8);
-    background-image: url('https://i.ibb.co/HCd0xVH/clouds.png');
-    background-size: cover;
-}
-/* Rain effect */
-@keyframes rain {0% {top: -10%; opacity: 0;} 50% {opacity:1;} 100% {top:100%; opacity:0;}}
-.raindrop {position:absolute; width:2px; height:15px; background:white; opacity:0.5; animation:rain linear infinite; animation-duration:1s;}
-</style>
-<script>
-const body = document.body;
-for(let i=0;i<150;i++){
-  const drop=document.createElement('div');
-  drop.className='raindrop';
-  drop.style.left=Math.random()*100+'vw';
-  drop.style.animationDuration=(0.5+Math.random()*1.5)+'s';
-  drop.style.top=Math.random()*100+'vh';
-  body.appendChild(drop);
-}
-</script>
-""", unsafe_allow_html=True)
-
-# -----------------------------
 # Load dataset
 # -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("weatherAUS.csv")
-    df.columns = df.columns.str.strip()  # إزالة الفراغات
+    # إزالة أي فراغات من أسماء الأعمدة
+    df.columns = df.columns.str.strip()
     
-    # تحويل Month إلى integer
-    df['Month'] = df['Month'].astype(int)
+    # تحويل Month إلى integer إذا موجود
+    if 'Month' in df.columns:
+        df['Month'] = df['Month'].astype(int)
     
     # Encode categorical
-    df['RainTomorrow_Code'] = df['RainTomorrow'].map({'Yes':1,'No':0})
-    df['RainToday_Code'] = df['RainToday'].map({'Yes':1,'No':0})
-    
-    le_loc = LabelEncoder()
-    df['Location_Code'] = le_loc.fit_transform(df['Location'])
-    
+    if 'RainTomorrow' in df.columns:
+        df['RainTomorrow_Code'] = df['RainTomorrow'].map({'Yes':1,'No':0})
+    if 'RainToday' in df.columns:
+        df['RainToday_Code'] = df['RainToday'].map({'Yes':1,'No':0})
+    if 'Location' in df.columns:
+        le_loc = LabelEncoder()
+        df['Location_Code'] = le_loc.fit_transform(df['Location'])
+    else:
+        le_loc = None
+
     # Create WindSpeed_mean if not exists
-    if 'WindSpeed_mean' not in df.columns:
+    if 'WindSpeed_mean' not in df.columns and 'WindGustSpeed' in df.columns:
         df['WindSpeed_mean'] = df[['WindGustSpeed']].mean(axis=1)
     
     # Fill missing numerical values with median
     num_cols = ['Rainfall','Temp3pm','Humidity3pm','WindSpeed_mean']
     for col in num_cols:
-        df[col] = df[col].fillna(df[col].median())
+        if col in df.columns:
+            df[col] = df[col].fillna(df[col].median())
     
     return df, le_loc
 

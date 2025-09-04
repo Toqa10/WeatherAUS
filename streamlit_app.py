@@ -1,4 +1,4 @@
-# weather_dashboard_rain.py
+# streamlit_rain_dashboard.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,35 +11,34 @@ import streamlit.components.v1 as components
 # Page Config
 # ----------------------------
 st.set_page_config(
-    page_title="🌦️ Weather AUS Dashboard",
+    page_title="Weather AUS Prediction",
     layout="wide",
     page_icon="🌦️"
 )
 
 # ----------------------------
-# Title
-# ----------------------------
-st.title("🌦️ Weather AUS Dashboard with Rain Animation")
-
-# ----------------------------
-# Rain & Clouds Background (Canvas + JS)
+# Background Animation (Rain & Clouds)
 # ----------------------------
 rain_html = """
-<canvas id="rainCanvas"></canvas>
+<canvas id="rainCanvas" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1;"></canvas>
 <script>
 const canvas = document.getElementById('rainCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 const drops = [];
-for(let i=0;i<200;i++){
+for(let i=0;i<300;i++){
     drops.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, l: Math.random()*20+10, xs: Math.random()*2-1, ys: Math.random()*4+4});
 }
 
 function draw(){
-    // Background
-    ctx.fillStyle = '#cceeff'; // Light blue
+    // Background light blue
+    ctx.fillStyle = '#cceeff';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // Clouds
@@ -79,28 +78,28 @@ function draw(){
 draw();
 </script>
 """
-
 components.html(rain_html, height=600)
 
 # ----------------------------
-# Load Example Data (Random)
+# Load Data (Random Example)
 # ----------------------------
 @st.cache_data
 def load_data():
     data = {
-        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart"], 400),
-        "Month": np.random.randint(1,13,400),
-        "RainTomorrow": np.random.choice(["Yes","No"], 400),
-        "Rainfall": np.random.rand(400)*20,
-        "Temp3pm": np.random.rand(400)*15+15,
-        "Humidity3pm": np.random.randint(30,100,400)
+        "Location": np.random.choice(["Sydney","Melbourne","Brisbane","Perth","Adelaide","Hobart"], 500),
+        "Month": np.random.randint(1,13,500),
+        "RainTomorrow": np.random.choice(["Yes","No"], 500),
+        "Rainfall": np.random.rand(500)*20,
+        "Temp3pm": np.random.rand(500)*15+15,
+        "Humidity3pm": np.random.randint(30,100,500)
     }
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    return df
 
 df = load_data()
 
 # ----------------------------
-# Encode Categorical
+# Encode categorical
 # ----------------------------
 le_location = LabelEncoder()
 df['Location_enc'] = le_location.fit_transform(df['Location'])
@@ -109,7 +108,7 @@ le_target = LabelEncoder()
 df['RainTomorrow_enc'] = le_target.fit_transform(df['RainTomorrow'])
 
 # ----------------------------
-# Train Simple Model
+# Features & Model
 # ----------------------------
 features = ['Location_enc','Month','Rainfall','Temp3pm','Humidity3pm']
 X = df[features]
@@ -128,6 +127,12 @@ selected_month = st.sidebar.selectbox("Select Month", sorted(df['Month'].unique(
 filtered_df = df[(df['Location']==selected_location) & (df['Month']==selected_month)]
 
 # ----------------------------
+# Title
+# ----------------------------
+st.title("🌦️ Weather AUS Prediction Dashboard")
+st.subheader(f"Location: {selected_location} | Month: {selected_month}")
+
+# ----------------------------
 # Prediction
 # ----------------------------
 if not filtered_df.empty:
@@ -143,21 +148,24 @@ if not filtered_df.empty:
     # Charts
     # ----------------------------
     st.markdown("### 🌡️ Temperature Distribution")
-    fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, color_discrete_sequence=["#66c2ff"])
+    fig1 = px.histogram(filtered_df, x="Temp3pm", nbins=20, title="Temperature at 3 PM",
+                        color_discrete_sequence=["#66c2ff"])
     st.plotly_chart(fig1, use_container_width=True)
 
     st.markdown("### 💧 Rainfall Distribution")
-    fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, color_discrete_sequence=["#3399ff"])
+    fig2 = px.histogram(filtered_df, x="Rainfall", nbins=20, title="Rainfall (mm)",
+                        color_discrete_sequence=["#3399ff"])
     st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown("### 🌬️ Humidity Distribution")
-    fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, color_discrete_sequence=["#99ccff"])
+    fig3 = px.histogram(filtered_df, x="Humidity3pm", nbins=20, title="Humidity at 3 PM (%)",
+                        color_discrete_sequence=["#99ccff"])
     st.plotly_chart(fig3, use_container_width=True)
 
     # ----------------------------
-    # Data Preview
+    # Show Data
     # ----------------------------
     st.markdown("### 🗂️ Data Preview")
     st.dataframe(filtered_df[['Location','Month','Temp3pm','Rainfall','Humidity3pm','Predicted_RainTomorrow']].head(10))
 else:
-    st.warning("No data for this location and month!")
+    st.warning("No data available for the selected location and month.")

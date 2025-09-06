@@ -216,14 +216,15 @@ def go_home():
 def go_prediction():
     st.session_state.page = "prediction"
 
-# ---------- Pages ----------
+# ---------- Home Page ----------
 if st.session_state.page == "home":
     st.title("🌤️ WeatherAUS Dashboard")
-    st.write("Welcome! This is the **Home Page**.")
-    st.write("From here you can explore the dashboard or go to prediction.")
+    st.write("Welcome to the **WeatherAUS App**!")
+    st.write("From here you can go to the prediction page.")
 
     st.button("🔮 Go to Prediction", on_click=go_prediction)
 
+# ---------- Prediction Page ----------
 elif st.session_state.page == "prediction":
     st.title("🌧️ RainTomorrow Prediction")
     st.write("Enter today's weather data to predict if it will rain tomorrow.")
@@ -257,3 +258,4 @@ elif st.session_state.page == "prediction":
             st.error("⚠️ Model or encoder not loaded.")
 
     st.button("🏠 Back to Home", on_click=go_home)
+

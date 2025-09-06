@@ -186,3 +186,55 @@ st.plotly_chart(fig3, use_container_width=True)
 # Show Data
 st.markdown("### 🗂️ Data Preview")
 st.dataframe(filtered_df[['Location','Month','Temp3pm','Rainfall','Humidity3pm','Predicted_RainTomorrow']].head(10))
+import streamlit as st
+import numpy as np
+import pickle
+
+st.set_page_config(page_title="RainTomorrow Prediction", layout="centered")
+
+# عنوان الصفحة
+st.title("🌧️ RainTomorrow Prediction")
+st.write("Enter today's weather data to predict if it will rain tomorrow.")
+
+# تحميل الموديل والإنكودر
+try:
+    model = pickle.load(open("Decision Tree.pkl", "rb"))
+    rain_today_encoder = pickle.load(open("RainToday_label_encoder.pkl", "rb"))
+    rain_tomorrow_encoder = pickle.load(open("RainTomorrow_label_encoder.pkl", "rb"))
+except:
+    st.error("❌ Missing model or encoder files. Please make sure they are in the app directory.")
+
+# إدخال البيانات من المستخدم
+MaxTemp = st.number_input("Max Temperature (°C)", value=25.0, step=0.1)
+Rainfall = st.number_input("Rainfall (mm)", value=0.0, step=0.1)
+WindGustSpeed = st.number_input("Wind Gust Speed (km/h)", value=35.0, step=1.0)
+Humidity9am = st.number_input("Humidity at 9AM (%)", value=60.0, step=1.0)
+Humidity3pm = st.number_input("Humidity at 3PM (%)", value=55.0, step=1.0)
+Pressure9am = st.number_input("Pressure at 9AM (hPa)", value=1015.0, step=0.1)
+Pressure3pm = st.number_input("Pressure at 3PM (hPa)", value=1013.0, step=0.1)
+Temp3pm = st.number_input("Temperature at 3PM (°C)", value=22.0, step=0.1)
+RainToday = st.selectbox("Rain Today?", ["No", "Yes"])
+RISK_MM = st.number_input("RISK_MM (mm)", value=0.2, step=0.1)
+
+# تحويل RainToday
+RainToday_encoded = None
+if 'rain_today_encoder' in locals():
+    RainToday_encoded = rain_today_encoder.transform([RainToday])[0]
+
+# زرار التوقع
+if st.button("🔮 Predict"):
+    if RainToday_encoded is None:
+        st.error("Encoders not loaded properly.")
+    else:
+        features = np.array([
+            MaxTemp, Rainfall, WindGustSpeed, Humidity9am, Humidity3pm,
+            Pressure9am, Pressure3pm, Temp3pm, RainToday_encoded, RISK_MM
+        ]).reshape(1, -1)
+
+        prediction = model.predict(features)[0]
+        prediction_label = rain_tomorrow_encoder.inverse_transform([prediction])[0]
+        prob = model.predict_proba(features)[0]
+
+        st.success(f"☁️ Prediction: **{prediction_label}**")
+        st.info(f"📊 Probability → No: {prob[0]*100:.2f}% | Yes: {prob[1]*100:.2f}%")
+

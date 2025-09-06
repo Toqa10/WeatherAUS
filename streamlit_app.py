@@ -190,44 +190,33 @@ import streamlit as st
 import pickle
 import numpy as np
 
-# Load the trained model
+# تحميل الموديل
 model = pickle.load(open("weather_model.pkl", "rb"))
 
-# Sidebar for navigation
+# Sidebar للتنقل بين الصفحات
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Home", "Weather Classification"])
 
-# Home Page
+# الصفحة الرئيسية
 if page == "Home":
     st.title("🌦️ Welcome to the Weather App")
-    st.write("Use the sidebar to navigate to the Weather Classification page.")
+    st.write("استخدم الزرار على الشمال عشان تدخل على صفحة توقع الطقس")
 
-# Weather Classification Page
+# صفحة التنبؤ بالطقس
 elif page == "Weather Classification":
     st.title("🌧️ Weather Classification")
-    st.write("Enter the weather details below and check the prediction.")
+    st.write("أدخل البيانات وشوف التوقع من الموديل")
 
-    # Example input fields (change according to your dataset features)
+    # هنا افترضت إن الموديل بياخد 3 features (غيرهم لو عندك اكتر)
     temp = st.number_input("Temperature (°C)", -10, 50, 25)
     humidity = st.slider("Humidity (%)", 0, 100, 50)
     wind = st.slider("Wind Speed (km/h)", 0, 100, 10)
 
     if st.button("Predict"):
-        # Convert inputs into array
         features = np.array([[temp, humidity, wind]])
-        
-        try:
-            prediction = model.predict(features)[0]
-            proba = model.predict_proba(features)[0]
+        prediction = model.predict(features)[0]
+        proba = model.predict_proba(features)[0]
 
-            st.subheader("✅ Prediction Result")
-            st.write(f"Prediction: **{prediction}**")
-            
-            # Show probabilities as a dictionary
-            st.write("Class Probabilities:")
-            probs_dict = {cls: f"{p*100:.2f}%" for cls, p in zip(model.classes_, proba)}
-            st.json(probs_dict)
-
-        except Exception as e:
-            st.error(f"Error: {e}")
-
+        st.subheader("✅ Prediction Result")
+        st.write(f"Prediction: **{prediction}**")
+        st.write(f"Probabilities: {dict(zip(model.classes_, proba.round(2)))}")

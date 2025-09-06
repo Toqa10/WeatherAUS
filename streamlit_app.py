@@ -190,72 +190,44 @@ import streamlit as st
 import pickle
 import numpy as np
 
-# ---------- Page Config ----------
-st.set_page_config(page_title="WeatherAUS", page_icon="🌧️", layout="centered")
+# Load the trained model
+model = pickle.load(open("weather_model.pkl", "rb"))
 
-# ---------- Load Models ----------
-def load_models():
-    try:
-        model = pickle.load(open("Decision Tree.pkl", "rb"))
-        rain_today_encoder = pickle.load(open("RainToday_label_encoder.pkl", "rb"))
-        rain_tomorrow_encoder = pickle.load(open("RainTomorrow_label_encoder.pkl", "rb"))
-        return model, rain_today_encoder, rain_tomorrow_encoder
-    except Exception as e:
-        st.error("❌ Error loading models/encoders. Make sure pickle files exist.")
-        return None, None, None
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Home", "Weather Classification"])
 
-model, rain_today_encoder, rain_tomorrow_encoder = load_models()
+# Home Page
+if page == "Home":
+    st.title("🌦️ Welcome to the Weather App")
+    st.write("Use the sidebar to navigate to the Weather Classification page.")
 
-# ---------- Navigation ----------
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+# Weather Classification Page
+elif page == "Weather Classification":
+    st.title("🌧️ Weather Classification")
+    st.write("Enter the weather details below and check the prediction.")
 
-def go_home():
-    st.session_state.page = "home"
-
-def go_prediction():
-    st.session_state.page = "prediction"
-
-# ---------- Home Page ----------
-if st.session_state.page == "home":
-    st.title("🌤️ WeatherAUS Dashboard")
-    st.write("Welcome to the **WeatherAUS App**!")
-    st.write("From here you can go to the prediction page.")
-
-    st.button("🔮 Go to Prediction", on_click=go_prediction)
-
-# ---------- Prediction Page ----------
-elif st.session_state.page == "prediction":
-    st.title("🌧️ RainTomorrow Prediction")
-    st.write("Enter today's weather data to predict if it will rain tomorrow.")
-
-    MaxTemp = st.number_input("Max Temperature (°C)", value=25.0, step=0.1)
-    Rainfall = st.number_input("Rainfall (mm)", value=0.0, step=0.1)
-    WindGustSpeed = st.number_input("Wind Gust Speed (km/h)", value=35.0, step=1.0)
-    Humidity9am = st.number_input("Humidity at 9AM (%)", value=60.0, step=1.0)
-    Humidity3pm = st.number_input("Humidity at 3PM (%)", value=55.0, step=1.0)
-    Pressure9am = st.number_input("Pressure at 9AM (hPa)", value=1015.0, step=0.1)
-    Pressure3pm = st.number_input("Pressure at 3PM (hPa)", value=1013.0, step=0.1)
-    Temp3pm = st.number_input("Temperature at 3PM (°C)", value=22.0, step=0.1)
-    RainToday = st.selectbox("Rain Today?", ["No", "Yes"])
-    RISK_MM = st.number_input("RISK_MM (mm)", value=0.2, step=0.1)
+    # Example input fields (change according to your dataset features)
+    temp = st.number_input("Temperature (°C)", -10, 50, 25)
+    humidity = st.slider("Humidity (%)", 0, 100, 50)
+    wind = st.slider("Wind Speed (km/h)", 0, 100, 10)
 
     if st.button("Predict"):
-        if model and rain_today_encoder and rain_tomorrow_encoder:
-            RainToday_encoded = rain_today_encoder.transform([RainToday])[0]
-            features = np.array([
-                MaxTemp, Rainfall, WindGustSpeed, Humidity9am, Humidity3pm,
-                Pressure9am, Pressure3pm, Temp3pm, RainToday_encoded, RISK_MM
-            ]).reshape(1, -1)
-
+        # Convert inputs into array
+        features = np.array([[temp, humidity, wind]])
+        
+        try:
             prediction = model.predict(features)[0]
-            prediction_label = rain_tomorrow_encoder.inverse_transform([prediction])[0]
-            prob = model.predict_proba(features)[0]
+            proba = model.predict_proba(features)[0]
 
-            st.success(f"☁️ Prediction: **{prediction_label}**")
-            st.info(f"📊 Probability → No: {prob[0]*100:.2f}% | Yes: {prob[1]*100:.2f}%")
-        else:
-            st.error("⚠️ Model or encoder not loaded.")
+            st.subheader("✅ Prediction Result")
+            st.write(f"Prediction: **{prediction}**")
+            
+            # Show probabilities as a dictionary
+            st.write("Class Probabilities:")
+            probs_dict = {cls: f"{p*100:.2f}%" for cls, p in zip(model.classes_, proba)}
+            st.json(probs_dict)
 
-    st.button("🏠 Back to Home", on_click=go_home)
+        except Exception as e:
+            st.error(f"Error: {e}")
 
